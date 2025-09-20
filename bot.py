@@ -2,17 +2,26 @@ import os
 import asyncio
 import telegram
 import json
+import random
 from PIL import Image, ImageDraw, ImageFont
+from datetime import date, timedelta 
 
-def generate_chore_chart(headers, rows, filename="Dieta.png"):
+def get_week():
+    start = date.today()
+    end = start + timedelta(days=6) 
+
+    return start.strftime('%m/%d') + " - " + end.strftime('%m/%d')
+
+def generate_diet(foods, filename="Dieta.png"):
     # settings
+    headers = [get_week(), "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
     cell_width = 200
     cell_height = 60
-    font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/Ubuntu-C.ttf", (cell_width/cell_height) * 5)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/Ubuntu-C.ttf", 30)
     
     # calculate size
     img_width = cell_width * len(headers)
-    img_height = cell_height * (len(rows) + 1)
+    img_height = cell_height * (len(foods) + 1)
     
     # create image
     img = Image.new("RGB", (img_width, img_height), "white")
@@ -22,11 +31,10 @@ def generate_chore_chart(headers, rows, filename="Dieta.png"):
     for i, header in enumerate(headers):
         x0, y0 = i * cell_width, 0
         x1, y1 = x0 + cell_width, cell_height
-        draw.rectangle([x0, y0, x1, y1], outline="black", fill="blue")
+        draw.rectangle([x0, y0, x1, y1], outline="black", fill="#42aaf5")
         draw.text((x0 + 10, y0 + 20), header, fill="black", font=font)
     
-    # draw rows
-    for row_i, row in enumerate(rows):
+    for row_i, row in enumerate(foods):
         for col_i, cell in enumerate(row):
             x0, y0 = col_i * cell_width, (row_i + 1) * cell_height
             x1, y1 = x0 + cell_width, y0 + cell_height
@@ -34,20 +42,34 @@ def generate_chore_chart(headers, rows, filename="Dieta.png"):
             draw.text((x0 + 10, y0 + 20), str(cell), fill="black", font=font)
     
     img.save(filename)
-    return filename
 
+def get_foods(json_path):
+    with open("frequenze.json", "r") as f:
+        cibi = json.load(f)
+        foods = [["Pranzo"] + [""] * 7, ["Cena"] + [""] * 7]
+        old_food = ""
+        
+        for i in range(7):
+            for j in range(2):
+                food = None
+                
+                while food is None or (old_food == food and len(cibi) > 1):
+                    food, num = random.choice(list(cibi.items()))
 
-# Example usage
-headers = ["", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
-with open("frequenze.json", "r") as f:
-    cibi = json.load(f)
-rows = [
-    ["Pranzo", "temp", "temp","temp","temp","temp","temp","temp"],
-    ["Cena", "temp", "temp","temp","temp","temp","temp","temp"]
-]
-
-generate_chore_chart(headers, rows)
-
+                cibi[food] -= 1
+                foods[j][i+1] = food
+                old_food = food
+                if cibi[food] == 0:
+                    cibi.pop(food)
+                                
+    #check redudacy last day
+    if(foods[0][7] == foods[1][7]):
+        for i in range(1,len(foods[0])-1):
+            if foods[0][i] != foods[1][7]:
+                foods[0][i], foods[1][7] = foods[1][7], foods[0][i]
+                break   
+    return foods
+   
 TOKEN = str(os.getenv("TELEGRAM_TOKEN"))
 CHAT_ID = str(os.getenv("TELEGRAM_CHAT_ID"))
 
@@ -57,15 +79,12 @@ if TOKEN == "None" or TOKEN.strip() == "":
 if CHAT_ID == "None" or CHAT_ID.strip() == "":
     raise ValueError("TELEGRAM_CHAT_ID environment variable is not set or is empty")
 
+async def main():
+    bot = telegram.Bot(TOKEN)
+    generate_diet(get_foods("frequenze.json"))
+    async with bot:
+        with open("Dieta.png", "rb") as img_file:
+            await bot.send_photo(chat_id=CHAT_ID, photo=img_file, caption="Ecco la dieta di questa settimana")
 
-
-
-
-#async def main():
-#    bot = telegram.Bot(TOKEN)
-#    async with bot:
-#        await bot.send_message(chat_id=CHAT_ID, text="Prova")
-#
-#
-#if __name__ == '__main__':
-#    asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())
