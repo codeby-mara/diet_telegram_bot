@@ -17,7 +17,7 @@ def generate_diet(foods, filename="Dieta.png"):
     headers = [get_week(), "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
     cell_width = 200
     cell_height = 60
-    font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/Ubuntu-C.ttf", 30)
+    font = ImageFont.truetype("Roboto-Medium.ttf", 30)
     
     # calculate size
     img_width = cell_width * len(headers)
@@ -38,7 +38,8 @@ def generate_diet(foods, filename="Dieta.png"):
         for col_i, cell in enumerate(row):
             x0, y0 = col_i * cell_width, (row_i + 1) * cell_height
             x1, y1 = x0 + cell_width, y0 + cell_height
-            draw.rectangle([x0, y0, x1, y1], outline="black", fill="white")
+            fill_color = "#36abba" if col_i == 0 else "white"
+            draw.rectangle([x0, y0, x1, y1], outline="black", fill=fill_color)
             draw.text((x0 + 10, y0 + 20), str(cell), fill="black", font=font)
     
     img.save(filename)
@@ -86,7 +87,6 @@ async def main():
         with open("Dieta.png", "rb") as img_file:
             await bot.send_photo(chat_id=CHAT_ID, photo=img_file, caption="Ecco la dieta di questa settimana")
 
-            
     try:
         os.remove("Dieta.png")
     except Exception as e:
