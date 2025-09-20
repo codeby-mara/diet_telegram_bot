@@ -61,7 +61,7 @@ def get_foods(json_path):
                 old_food = food
                 if cibi[food] == 0:
                     cibi.pop(food)
-                                
+
     #check redudacy last day
     if(foods[0][7] == foods[1][7]):
         for i in range(1,len(foods[0])-1):
@@ -86,5 +86,12 @@ async def main():
         with open("Dieta.png", "rb") as img_file:
             await bot.send_photo(chat_id=CHAT_ID, photo=img_file, caption="Ecco la dieta di questa settimana")
 
+            
+    try:
+        os.remove("Dieta.png")
+    except Exception as e:
+        print(f"Errore nella cancellazione dell'immagine: {e}")
+
 if __name__ == '__main__':
     asyncio.run(main())
+
